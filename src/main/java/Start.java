@@ -8,7 +8,8 @@ import discord4j.core.object.entity.User;
 public class Start {
 
     public static void main(String args[]) {
-        DiscordClient client = DiscordClientBuilder.create("Nzc4Nzc4MzkwMjkwNzU5NzIz.X7W75Q._8XBrJDQ4tuy8pbEvNQFIGIsJAo").build();
+        String SECRET = "Nzc4Nzc4MzkwMjkwNzU5NzIz.X7W75Q._8XBrJDQ4tuy8pbEvNQFIGIsJAo";
+        DiscordClient client = DiscordClientBuilder.create(SECRET).build();
         Setup setup = new Setup(client);
 
         //setup.cutImages();
