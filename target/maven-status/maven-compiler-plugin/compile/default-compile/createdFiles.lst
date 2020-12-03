@@ -1,3 +1,7 @@
-Start.class
-Constants.class
-Setup.class
+boot\Start.class
+game\setup\Deck.class
+boot\Bot.class
+common\Constants.class
+game\setup\Card.class
+boot\Commands.class
+common\Filter.class

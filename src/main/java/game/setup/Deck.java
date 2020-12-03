@@ -26,8 +26,6 @@ public class Deck extends Filter {
     Consumer<MessageCreateSpec> messageCreateSpecConsumer;
     Constants constants = new Constants();
 
-    String name;
-
     public Deck(DiscordClient client) {
         super(client);
         this.client = client;
@@ -162,8 +160,84 @@ public class Deck extends Filter {
 //        }
 //    }
 
-    private void subscribeDeckMessages(Flux<Message> holdEvent, String cardName, ByteArrayInputStream stream) {
-        holdEvent.flatMap(Message::getChannel)
+    public void subscribeAddToDeck() {
+        Flux<Message> messageFlux = isAdminAndCommand(constants.ADD);
+        messageFlux.flatMap(Message::getChannel)
+                .flatMap(messageChannel -> {
+                    String message;
+                    String[] names = getContent().split(" ");
+
+                    if(addCards(names)) {
+                        message = constants.unusedCards.size() == 0 ? "Added cards to deck. All unused cards added to playing deck" : "Added cards to deck.";
+                    } else {
+                        message = "Couldn't find cards";
+                    }
+                    messageCreateSpecConsumer = messageCreateSpec -> messageCreateSpec.setContent(message);
+
+                    return messageChannel.createMessage(messageCreateSpecConsumer);
+                })
+                .subscribe();
+    }
+
+    private boolean removeCard(String[] cardNames) {
+        boolean flag = false;
+
+        for(String cardName : cardNames) {
+            Object[] cardCollection = constants.unusedCards.get(cardName).toArray();
+            Card card = (cardCollection.length > 0) ? (Card) cardCollection[0] : null;
+
+            if (card != null) {
+                constants.unusedCards.removeMapping(cardName, card);
+
+                card.getSubscribedEvent().dispose();
+                constants.playingCards.put(card.getCardName(), card);
+
+                flag = true;
+            }
+        }
+        return flag;
+    }
+
+    public void subscribeAddToDeck() {
+        Flux<Message> messageFlux = isAdminAndCommand(constants.ADD);
+        messageFlux.flatMap(Message::getChannel)
+                .flatMap(messageChannel -> {
+                    String message;
+                    String[] names = getContent().split(" ");
+
+                    if(addCards(names)) {
+                        message = constants.unusedCards.size() == 0 ? "Added cards to deck. All unused cards added to playing deck" : "Added cards to deck.";
+                    } else {
+                        message = "Couldn't find cards";
+                    }
+                    messageCreateSpecConsumer = messageCreateSpec -> messageCreateSpec.setContent(message);
+
+                    return messageChannel.createMessage(messageCreateSpecConsumer);
+                })
+                .subscribe();
+    }
+
+    private boolean addCards(String[] cardNames) {
+        boolean flag = false;
+
+        for(String cardName : cardNames) {
+            Object[] cardCollection = constants.unusedCards.get(cardName).toArray();
+            Card card = (cardCollection.length > 0) ? (Card) cardCollection[0] : null;
+
+            if (card != null) {
+                constants.unusedCards.removeMapping(cardName, card);
+
+                card.getSubscribedEvent().dispose();
+                constants.playingCards.put(card.getCardName(), card);
+
+                flag = true;
+            }
+        }
+        return flag;
+    }
+
+    private void subscribeDeckMessages(Flux<Message> adminAndCommandEvent, String cardName, ByteArrayInputStream stream) {
+        Disposable disposable = adminAndCommandEvent.flatMap(Message::getChannel)
             .flatMap(messageChannel -> {
                 messageCreateSpecConsumer = messageCreateSpec -> messageCreateSpec.setContent(cardName).addFile(cardName + ".png", stream);
                 stream.reset();
@@ -171,12 +245,14 @@ public class Deck extends Filter {
                 return messageChannel.createMessage(messageCreateSpecConsumer);
             })
             .subscribe();
+
+        constants.unusedCards.put(cardName, new Card(cardName, stream, disposable));
     }
 
     public void subscribeAndCutImage() {
         URL res = getClass().getClassLoader().getResource("Cards.png");
         BufferedImage originalImgage = null;
-        Flux<Message> holdEvent = isAdminAndCommand();
+        Flux<Message> adminAndCommandEvent = isAdminAndCommand(constants.DISPLAY_UNUSED);
 
         try {
             originalImgage = ImageIO.read(Paths.get(res.toURI()).toFile());
@@ -206,7 +282,7 @@ public class Deck extends Filter {
                 e.printStackTrace();
             }
 
-            subscribeDeckMessages(holdEvent, cardName, new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
+            subscribeDeckMessages(adminAndCommandEvent, cardName, new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
 
             byteArrayOutputStream.reset();
 
