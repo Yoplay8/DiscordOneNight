@@ -160,37 +160,37 @@ public class Deck extends Filter {
 //        }
 //    }
 
-    public void subscribeAddToDeck() {
-        Flux<Message> messageFlux = isAdminAndCommand(constants.ADD);
+    public void subscribeRemoveFromDeck() {
+        Flux<Message> messageFlux = isAdminAndCommand(constants.REMOVE);
         messageFlux.flatMap(Message::getChannel)
-                .flatMap(messageChannel -> {
-                    String message;
-                    String[] names = getContent().split(" ");
+            .flatMap(messageChannel -> {
+                String message;
+                String[] names = getContent().split(" ");
 
-                    if(addCards(names)) {
-                        message = constants.unusedCards.size() == 0 ? "Added cards to deck. All unused cards added to playing deck" : "Added cards to deck.";
-                    } else {
-                        message = "Couldn't find cards";
-                    }
-                    messageCreateSpecConsumer = messageCreateSpec -> messageCreateSpec.setContent(message);
+                if(removeCard(names)) {
+                    message = constants.unusedCards.size() == 0 ? "Removed cards from deck. All playing cards removed from playing deck" : "Removed cards from deck.";
+                } else {
+                    message = "Couldn't find cards";
+                }
+                messageCreateSpecConsumer = messageCreateSpec -> messageCreateSpec.setContent(message);
 
-                    return messageChannel.createMessage(messageCreateSpecConsumer);
-                })
-                .subscribe();
+                return messageChannel.createMessage(messageCreateSpecConsumer);
+            })
+            .subscribe();
     }
 
     private boolean removeCard(String[] cardNames) {
         boolean flag = false;
 
         for(String cardName : cardNames) {
-            Object[] cardCollection = constants.unusedCards.get(cardName).toArray();
+            Object[] cardCollection = constants.playingCards.get(cardName).toArray();
             Card card = (cardCollection.length > 0) ? (Card) cardCollection[0] : null;
 
             if (card != null) {
-                constants.unusedCards.removeMapping(cardName, card);
+                constants.playingCards.removeMapping(cardName, card);
 
                 card.getSubscribedEvent().dispose();
-                constants.playingCards.put(card.getCardName(), card);
+                constants.unusedCards.put(card.getCardName(), card);
 
                 flag = true;
             }
@@ -201,20 +201,20 @@ public class Deck extends Filter {
     public void subscribeAddToDeck() {
         Flux<Message> messageFlux = isAdminAndCommand(constants.ADD);
         messageFlux.flatMap(Message::getChannel)
-                .flatMap(messageChannel -> {
-                    String message;
-                    String[] names = getContent().split(" ");
+            .flatMap(messageChannel -> {
+                String message;
+                String[] names = getContent().split(" ");
 
-                    if(addCards(names)) {
-                        message = constants.unusedCards.size() == 0 ? "Added cards to deck. All unused cards added to playing deck" : "Added cards to deck.";
-                    } else {
-                        message = "Couldn't find cards";
-                    }
-                    messageCreateSpecConsumer = messageCreateSpec -> messageCreateSpec.setContent(message);
+                if(addCards(names)) {
+                    message = constants.unusedCards.size() == 0 ? "Added cards to deck. All unused cards added to playing deck" : "Added cards to deck.";
+                } else {
+                    message = "Couldn't find cards";
+                }
+                messageCreateSpecConsumer = messageCreateSpec -> messageCreateSpec.setContent(message);
 
-                    return messageChannel.createMessage(messageCreateSpecConsumer);
-                })
-                .subscribe();
+                return messageChannel.createMessage(messageCreateSpecConsumer);
+            })
+            .subscribe();
     }
 
     private boolean addCards(String[] cardNames) {
