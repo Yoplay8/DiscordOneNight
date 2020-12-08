@@ -13,12 +13,11 @@ public class Constants {
     //Bot commands
     public final String PREFIX = "!";
     public final String SET_PLAYERS = PREFIX + "setplayers";
-    public final String PLAY = PREFIX + "play";
-    public final String SET_DECK = PREFIX + "setdeck";
     public final String DISPLAY_UNUSED = PREFIX + "displayunused";
-    public final String DISPLAY_PLAYING_DECK = PREFIX + "displayplayingdeck";
+    public final String DISPLAY_PLAYING_DECK = PREFIX + "displayplaying";
     public final String ADD = PREFIX + "add";
     public final String REMOVE = PREFIX + "remove";
+    public final String PLAY = PREFIX + "play";
 
     public final int MAX_CARDS = 16;
     public final int MIN_PLAYERS = 3;

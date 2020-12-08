@@ -3,7 +3,6 @@ package game.setup;
 import common.Constants;
 import common.Filter;
 import discord4j.core.DiscordClient;
-import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Message;
 import discord4j.core.spec.MessageCreateSpec;
 import reactor.core.Disposable;
@@ -160,94 +159,6 @@ public class Deck extends Filter {
 //        }
 //    }
 
-    public void subscribeRemoveFromDeck() {
-        Flux<Message> messageFlux = isAdminAndCommand(constants.REMOVE);
-        messageFlux.flatMap(Message::getChannel)
-            .flatMap(messageChannel -> {
-                String message;
-                String[] names = getContent().split(" ");
-
-                if(removeCard(names)) {
-                    message = constants.unusedCards.size() == 0 ? "Removed cards from deck. All playing cards removed from playing deck" : "Removed cards from deck.";
-                } else {
-                    message = "Couldn't find cards";
-                }
-                messageCreateSpecConsumer = messageCreateSpec -> messageCreateSpec.setContent(message);
-
-                return messageChannel.createMessage(messageCreateSpecConsumer);
-            })
-            .subscribe();
-    }
-
-    private boolean removeCard(String[] cardNames) {
-        boolean flag = false;
-
-        for(String cardName : cardNames) {
-            Object[] cardCollection = constants.playingCards.get(cardName).toArray();
-            Card card = (cardCollection.length > 0) ? (Card) cardCollection[0] : null;
-
-            if (card != null) {
-                constants.playingCards.removeMapping(cardName, card);
-
-                card.getSubscribedEvent().dispose();
-                constants.unusedCards.put(card.getCardName(), card);
-
-                flag = true;
-            }
-        }
-        return flag;
-    }
-
-    public void subscribeAddToDeck() {
-        Flux<Message> messageFlux = isAdminAndCommand(constants.ADD);
-        messageFlux.flatMap(Message::getChannel)
-            .flatMap(messageChannel -> {
-                String message;
-                String[] names = getContent().split(" ");
-
-                if(addCards(names)) {
-                    message = constants.unusedCards.size() == 0 ? "Added cards to deck. All unused cards added to playing deck" : "Added cards to deck.";
-                } else {
-                    message = "Couldn't find cards";
-                }
-                messageCreateSpecConsumer = messageCreateSpec -> messageCreateSpec.setContent(message);
-
-                return messageChannel.createMessage(messageCreateSpecConsumer);
-            })
-            .subscribe();
-    }
-
-    private boolean addCards(String[] cardNames) {
-        boolean flag = false;
-
-        for(String cardName : cardNames) {
-            Object[] cardCollection = constants.unusedCards.get(cardName).toArray();
-            Card card = (cardCollection.length > 0) ? (Card) cardCollection[0] : null;
-
-            if (card != null) {
-                constants.unusedCards.removeMapping(cardName, card);
-
-                card.getSubscribedEvent().dispose();
-                constants.playingCards.put(card.getCardName(), card);
-
-                flag = true;
-            }
-        }
-        return flag;
-    }
-
-    private void subscribeDeckMessages(Flux<Message> adminAndCommandEvent, String cardName, ByteArrayInputStream stream) {
-        Disposable disposable = adminAndCommandEvent.flatMap(Message::getChannel)
-            .flatMap(messageChannel -> {
-                messageCreateSpecConsumer = messageCreateSpec -> messageCreateSpec.setContent(cardName).addFile(cardName + ".png", stream);
-                stream.reset();
-
-                return messageChannel.createMessage(messageCreateSpecConsumer);
-            })
-            .subscribe();
-
-        constants.unusedCards.put(cardName, new Card(cardName, stream, disposable));
-    }
 
     public void subscribeAndCutImage() {
         URL res = getClass().getClassLoader().getResource("Cards.png");
@@ -282,11 +193,101 @@ public class Deck extends Filter {
                 e.printStackTrace();
             }
 
-            subscribeDeckMessages(adminAndCommandEvent, cardName, new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
-
+            Card card = new Card(cardName, new ByteArrayInputStream(byteArrayOutputStream.toByteArray()), adminAndCommandEvent.subscribe());
+            card.setSubscribedEvent(resubscribeCardsMessage(adminAndCommandEvent, card));
+            constants.unusedCards.put(cardName, card);
             byteArrayOutputStream.reset();
 
             tWidth+=width;
         }
+    }
+
+    public void subscribeAddToDeck() {
+        Flux<Message> messageFlux = isAdminAndCommand(constants.ADD);
+        messageFlux.flatMap(Message::getChannel)
+            .flatMap(messageChannel -> {
+                String message;
+                String[] names = getContent().split(" ");
+
+                if(addCards(names)) {
+                    message = constants.unusedCards.size() == 0 ? "Added cards to deck. All unused cards added to playing deck" : "Added cards to deck.";
+                } else {
+                    message = "Couldn't find cards";
+                }
+                messageCreateSpecConsumer = messageCreateSpec -> messageCreateSpec.setContent(message);
+
+                return messageChannel.createMessage(messageCreateSpecConsumer);
+            })
+            .subscribe();
+    }
+
+    private boolean addCards(String[] cardNames) {
+        boolean flag = false;
+        Flux<Message> adminAndCommandEvent = isAdminAndCommand(constants.DISPLAY_PLAYING_DECK);
+
+        for(String cardName : cardNames) {
+            Object[] cardCollection = constants.unusedCards.get(cardName).toArray();
+            Card card = (cardCollection.length > 0) ? (Card) cardCollection[0] : null;
+
+            if (card != null) {
+                constants.unusedCards.removeMapping(card.getCardName(), card);
+                card.setSubscribedEvent(resubscribeCardsMessage(adminAndCommandEvent, card));
+                constants.playingCards.put(card.getCardName(), card);
+
+                flag = true;
+            }
+        }
+        return flag;
+    }
+
+    public void subscribeRemoveFromDeck() {
+        Flux<Message> messageFlux = isAdminAndCommand(constants.REMOVE);
+        messageFlux.flatMap(Message::getChannel)
+                .flatMap(messageChannel -> {
+                    String message;
+                    String[] names = getContent().split(" ");
+
+                    if(removeCard(names)) {
+                        message = constants.unusedCards.size() == 0 ? "Removed cards from deck. All playing cards removed from playing deck" : "Removed cards from deck.";
+                    } else {
+                        message = "Couldn't find cards";
+                    }
+                    messageCreateSpecConsumer = messageCreateSpec -> messageCreateSpec.setContent(message);
+
+                    return messageChannel.createMessage(messageCreateSpecConsumer);
+                })
+                .subscribe();
+    }
+
+    private boolean removeCard(String[] cardNames) {
+        boolean flag = false;
+        Flux<Message> adminAndCommandEvent = isAdminAndCommand(constants.DISPLAY_UNUSED);
+
+        for(String cardName : cardNames) {
+            Object[] cardCollection = constants.playingCards.get(cardName).toArray();
+            Card card = (cardCollection.length > 0) ? (Card) cardCollection[0] : null;
+
+            if (card != null) {
+                constants.playingCards.removeMapping(card.getCardName(), card);
+                card.setSubscribedEvent(resubscribeCardsMessage(adminAndCommandEvent, card));
+                constants.unusedCards.put(card.getCardName(), card);
+
+                flag = true;
+            }
+        }
+        return flag;
+    }
+
+    private Disposable resubscribeCardsMessage(Flux<Message> adminAndCommandEvent, Card card) {
+        card.getSubscribedEvent().dispose();
+
+        return adminAndCommandEvent.flatMap(Message::getChannel)
+            .flatMap(messageChannel -> {
+                messageCreateSpecConsumer = messageCreateSpec -> messageCreateSpec.setContent(card.getCardName()).addFile(card.getCardName() + ".png", card.getInputStream());
+                card.getInputStream().reset();
+
+                return messageChannel.createMessage(messageCreateSpecConsumer);
+            })
+            .subscribe();
     }
 }
