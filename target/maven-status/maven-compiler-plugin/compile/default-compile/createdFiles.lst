@@ -1,6 +1,7 @@
-boot\Start.class
+boot\StartGame.class
 game\setup\Deck.class
 boot\Bot.class
+boot\Main.class
 common\Constants.class
 game\setup\Card.class
 boot\Commands.class
