@@ -40,7 +40,7 @@ public class Deck extends Filter {
                     if(constants.numberOfPlayers < constants.MIN_PLAYERS || constants.numberOfPlayers > constants.MAX_PLAYERS) {
                         return channel.createMessage("Set number of players within range " + constants.MIN_PLAYERS + " - " + constants.MAX_PLAYERS);
                     }
-                    return channel.createMessage("Total players set to " + Constants.numberOfPlayers);
+                    return channel.createMessage("Total players set to " + constants.numberOfPlayers);
                 })
                 .subscribe();
     }

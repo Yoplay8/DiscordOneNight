@@ -6,7 +6,7 @@ import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 
 
 public class Constants {
-    public static int numberOfPlayers = 0;
+    public int numberOfPlayers = 0;
     public MultiValuedMap<String, Card> playingCards = new ArrayListValuedHashMap<>();
     public MultiValuedMap<String, Card> unusedCards = new ArrayListValuedHashMap<>();
 

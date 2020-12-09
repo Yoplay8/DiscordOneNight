@@ -1,6 +1,6 @@
 package common;
 
-import boot.Start;
+import boot.Main;
 import discord4j.core.DiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Message;
@@ -25,25 +25,13 @@ public class Filter {
         this.client  = client;
         constants = new Constants();
         properties = new Properties();
-        InputStream inputStream = Start.class.getClassLoader().getResourceAsStream("Valut.properties");
+        InputStream inputStream = Main.class.getClassLoader().getResourceAsStream("Valut.properties");
 
         try {
             properties.load(inputStream);
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    protected  void produceOneTimeCreateMessageEvent(String message) {
-        client.getEventDispatcher().on(MessageCreateEvent.class)
-            .map(MessageCreateEvent::getMessage)
-            .flatMap(Message::getChannel)
-            .flatMap(messageChannel -> {
-                Consumer<MessageCreateSpec> messageCreateSpecConsumer = messageCreateSpec -> messageCreateSpec.setContent(message);
-
-                return messageChannel.createMessage(messageCreateSpecConsumer);
-            })
-            .subscribe().dispose();
     }
 
     protected Flux<Message> isAdminAndCommand(String command) {
